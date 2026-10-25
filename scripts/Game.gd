@@ -180,6 +180,11 @@ func show_color_selection(mode: int):
 		var p1_label = Label.new(); p1_label.text = "Player 1"; p1_label.add_theme_font_size_override("font_size", 20); p1_box.add_child(p1_label)
 		var p1_preview = ColorRect.new(); p1_preview.custom_minimum_size = Vector2(120, 120); p1_preview.color = COLOR_OPTIONS[p1_color_index]["color"]; p1_box.add_child(p1_preview)
 		var p1_colors = HBoxContainer.new(); p1_box.add_child(p1_colors)
+		var p2_box = VBoxContainer.new(); p2_box.custom_minimum_size = Vector2(300, 200); top_row.add_child(p2_box)
+		var p2_label = Label.new(); p2_label.text = "Player 2"; p2_label.add_theme_font_size_override("font_size", 20); p2_box.add_child(p2_label)
+		var p2_preview = ColorRect.new(); p2_preview.custom_minimum_size = Vector2(120, 120); p2_preview.color = COLOR_OPTIONS[p2_color_index]["color"]; p2_box.add_child(p2_preview)
+		var p2_colors = HBoxContainer.new(); p2_box.add_child(p2_colors)
+		
 		for i in range(COLOR_OPTIONS.size()):
 			var button = Button.new(); button.text = COLOR_OPTIONS[i]["name"]; button.custom_minimum_size = Vector2(90, 36); button.modulate = COLOR_OPTIONS[i]["color"]
 			button.pressed.connect(func():
@@ -188,24 +193,21 @@ func show_color_selection(mode: int):
 				if p1_color_index == p2_color_index:
 					p2_color_index = get_next_available_color_index(p1_color_index)
 					if p2_color_index != -1:
-						update_color_select_previews(p1_preview, p1_colors, p2_preview, p2_colors)
+						p2_preview.color = COLOR_OPTIONS[p2_color_index]["color"]
 			)
 			p1_colors.add_child(button)
 		
-		var p2_box = VBoxContainer.new(); p2_box.custom_minimum_size = Vector2(300, 200); top_row.add_child(p2_box)
-		var p2_label = Label.new(); p2_label.text = "Player 2"; p2_label.add_theme_font_size_override("font_size", 20); p2_box.add_child(p2_label)
-		var p2_preview = ColorRect.new(); p2_preview.custom_minimum_size = Vector2(120, 120); p2_preview.color = COLOR_OPTIONS[p2_color_index]["color"]; p2_box.add_child(p2_preview)
-		var p2_colors = HBoxContainer.new(); p2_box.add_child(p2_colors)
 		for i in range(COLOR_OPTIONS.size()):
 			var button = Button.new(); button.text = COLOR_OPTIONS[i]["name"]; button.custom_minimum_size = Vector2(90, 36); button.modulate = COLOR_OPTIONS[i]["color"]
 			button.pressed.connect(func():
-				if i == p1_color_index:
-					var alt_index = get_next_available_color_index(i)
+				var selected_index = i
+				if selected_index == p1_color_index:
+					var alt_index = get_next_available_color_index(selected_index)
 					if alt_index == -1:
 						return
-					i = alt_index
-				p2_color_index = i
-				p2_preview.color = COLOR_OPTIONS[i]["color"]
+					selected_index = alt_index
+				p2_color_index = selected_index
+				p2_preview.color = COLOR_OPTIONS[selected_index]["color"]
 			)
 			p2_colors.add_child(button)
 		
@@ -222,10 +224,6 @@ func get_next_available_color_index(excluded_index: int) -> int:
 		if i != excluded_index:
 			return i
 	return -1
-
-func update_color_select_previews(_p1_preview: ColorRect, _p1_colors: HBoxContainer, _p2_preview: ColorRect, _p2_colors: HBoxContainer):
-	_p1_preview.color = COLOR_OPTIONS[p1_color_index]["color"]
-	_p2_preview.color = COLOR_OPTIONS[p2_color_index]["color"]
 
 func create_arena():
 	arena_bg = ColorRect.new()
