@@ -7,6 +7,8 @@ var exploded := false
 @onready var label: Label = $Label
 
 func _ready():
+	var possible_countdowns = [5.0, 6.0, 8.0]
+	countdown = possible_countdowns.pick_random()
 	label.text = str(int(ceil(countdown)))
 	label.modulate = Color(1, 1, 1, 1)
 	label.add_theme_font_size_override("font_size", 28)
