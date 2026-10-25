@@ -1,7 +1,7 @@
 extends CharacterBody2D
 
 const SPEED = 360.0
-const DASH_SPEED = 670.0
+const DASH_SPEED = 700.0
 const DASH_TIME = 0.18
 const DASH_COOLDOWN = 1.5
 const SHIELD_DURATION = 10.0
@@ -19,6 +19,7 @@ var shield_timer := 0.0
 var shield_cooldown := 0.0
 var shield_active := false
 var arena_size := DEFAULT_ARENA_SIZE
+var collected_ability := ""
 
 func _ready():
 	add_to_group("players")
@@ -110,6 +111,8 @@ func set_player_color(color: Color):
 	player_color = color
 	if has_node("ColorRect"):
 		$ColorRect.color = player_color
+	if not can_collect_pickup(collected_ability):
+		collected_ability = ""
 	queue_redraw()
 
 func set_arena_bounds(size: Vector2):
@@ -122,6 +125,9 @@ func get_ability_type() -> String:
 		return "shield"
 	return "none"
 
+func get_color_ability_name() -> String:
+	return get_ability_type()
+
 func is_color_close(color_a: Color, color_b: Color) -> bool:
 	var delta = Vector3(
 		color_a.r - color_b.r,
@@ -130,7 +136,42 @@ func is_color_close(color_a: Color, color_b: Color) -> bool:
 	)
 	return delta.length() < 0.15
 
+func can_collect_pickup(pickup_type: String) -> bool:
+	if pickup_type == "":
+		return false
+	if pickup_type == "dash":
+		return get_ability_type() == "dash" and (collected_ability == "" or collected_ability == "dash")
+	if pickup_type == "shield":
+		return get_ability_type() == "shield" and (collected_ability == "" or collected_ability == "shield")
+	return false
+
+func collect_pickup(pickup_type: String):
+	if not can_collect_pickup(pickup_type):
+		return
+	collected_ability = pickup_type
+
+func has_collected_ability() -> bool:
+	return collected_ability != ""
+
 func activate_ability():
+	if not alive:
+		return
+	if collected_ability == "dash":
+		if dash_cooldown > 0.0 or dash_timer > 0.0:
+			return
+		dash_timer = DASH_TIME
+		dash_cooldown = DASH_COOLDOWN
+		if last_movement_direction.length() == 0.0:
+			last_movement_direction = Vector2.RIGHT
+		return
+	if collected_ability == "shield":
+		if shield_active or shield_cooldown > 0.0:
+			return
+		shield_active = true
+		shield_timer = SHIELD_DURATION
+		shield_cooldown = SHIELD_COOLDOWN
+		return
+
 	var ability = get_ability_type()
 	if ability == "dash":
 		if dash_cooldown > 0.0 or dash_timer > 0.0:
@@ -140,7 +181,6 @@ func activate_ability():
 		if last_movement_direction.length() == 0.0:
 			last_movement_direction = Vector2.RIGHT
 		return
-
 	if ability == "shield":
 		if shield_active or shield_cooldown > 0.0:
 			return
@@ -149,14 +189,19 @@ func activate_ability():
 		shield_cooldown = SHIELD_COOLDOWN
 		return
 
+func activate_collected_ability():
+	if not has_collected_ability():
+		return
+	activate_ability()
+
 func is_dash_ready() -> bool:
-	return get_ability_type() == "dash" and dash_cooldown <= 0.0 and dash_timer <= 0.0
+	return collected_ability == "dash" and dash_cooldown <= 0.0 and dash_timer <= 0.0
 
 func is_shield_active() -> bool:
-	return get_ability_type() == "shield" and shield_active
+	return shield_active and collected_ability == "shield"
 
 func is_shield_ready() -> bool:
-	return get_ability_type() == "shield" and not shield_active and shield_cooldown <= 0.0
+	return not shield_active and shield_cooldown <= 0.0 and collected_ability == "shield"
 
 func get_dash_cooldown() -> float:
 	return dash_cooldown
@@ -171,8 +216,9 @@ func is_protected_from_explosions() -> bool:
 	return is_shield_active()
 
 func keep_in_arena():
-	var min_bounds = Vector2(26.0, 26.0)
-	var max_bounds = arena_size - Vector2(26.0, 26.0)
+	var padding = 26.0
+	var min_bounds = Vector2(padding, padding)
+	var max_bounds = arena_size - Vector2(padding, padding)
 	global_position = global_position.clamp(min_bounds, max_bounds)
 
 func die():
