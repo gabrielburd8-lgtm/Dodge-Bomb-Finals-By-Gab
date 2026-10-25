@@ -65,7 +65,7 @@ func _physics_process(delta):
 			move.x -= 1.0
 		if Input.is_key_pressed(KEY_RIGHT):
 			move.x += 1.0
-		if Input.is_key_pressed(KEY_RIGHT_CTRL):
+		if Input.is_key_pressed(KEY_CTRL):
 			activate_ability()
 
 	if move.length() > 0.0:
@@ -122,7 +122,12 @@ func get_ability_type() -> String:
 	return "none"
 
 func is_color_close(color_a: Color, color_b: Color) -> bool:
-	return color_a.distance_to(color_b) < 0.15
+	var delta = Vector3(
+		color_a.r - color_b.r,
+		color_a.g - color_b.g,
+		color_a.b - color_b.b
+	)
+	return delta.length() < 0.15
 
 func activate_ability():
 	var ability = get_ability_type()
