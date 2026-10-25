@@ -8,13 +8,13 @@ const ARENA_HEIGHT = 720
 const MAX_ACTIVE_BOMBS = 6
 
 const COLOR_OPTIONS = [
-	{"name": "Red", "color": Color(1.0, 0.28, 0.28)},
-	{"name": "Orange", "color": Color(1.0, 0.6, 0.2)},
-	{"name": "Yellow", "color": Color(1.0, 0.9, 0.2)},
-	{"name": "Green", "color": Color(0.25, 0.9, 0.38)},
-	{"name": "Blue", "color": Color(0.2, 0.62, 1.0)},
-	{"name": "Indigo", "color": Color(0.35, 0.35, 0.9)},
-	{"name": "Violet", "color": Color(0.74, 0.5, 1.0)},
+	{"name": "Red", "color": Color(1.0, 0.32, 0.32)},
+	{"name": "Orange", "color": Color(1.0, 0.62, 0.2)},
+	{"name": "Yellow", "color": Color(1.0, 0.88, 0.25)},
+	{"name": "Green", "color": Color(0.28, 0.88, 0.42)},
+	{"name": "Blue", "color": Color(0.26, 0.62, 1.0)},
+	{"name": "Indigo", "color": Color(0.38, 0.42, 0.93)},
+	{"name": "Violet", "color": Color(0.76, 0.52, 1.0)},
 ]
 
 enum GameMode {
@@ -34,7 +34,6 @@ var bomb_timer: Timer
 var timer_label: Label
 var info_label: Label
 var results_label: Label
-var arena_bg: ColorRect
 var solo_color_index := 0
 var p1_color_index := 0
 var p2_color_index := 1
@@ -66,6 +65,50 @@ func _process(_delta):
 	if Input.is_key_pressed(KEY_ESCAPE):
 		get_tree().quit()
 
+func set_panel_style(panel: PanelContainer, bg_color: Color, border_color: Color = Color(0.7, 0.8, 1.0, 0.9)):
+	var style_box = StyleBoxFlat.new()
+	style_box.bg_color = bg_color
+	style_box.border_width_left = 2
+	style_box.border_width_top = 2
+	style_box.border_width_right = 2
+	style_box.border_width_bottom = 2
+	style_box.border_color = border_color
+	style_box.corner_radius_top_left = 10
+	style_box.corner_radius_top_right = 10
+	style_box.corner_radius_bottom_left = 10
+	style_box.corner_radius_bottom_right = 10
+	style_box.content_margin_left = 24
+	style_box.content_margin_top = 18
+	style_box.content_margin_right = 24
+	style_box.content_margin_bottom = 18
+	panel.add_theme_stylebox_override("panel", style_box)
+
+func make_menu_button(text_value: String, button_size: Vector2 = Vector2(260, 56), text_size: int = 24, text_color: Color = Color(1,1,1,1)) -> Button:
+	var btn = Button.new()
+	btn.text = text_value
+	btn.custom_minimum_size = button_size
+	btn.add_theme_font_size_override("font_size", text_size)
+	btn.modulate = text_color
+	var normal = StyleBoxFlat.new()
+	normal.bg_color = Color(0.15, 0.18, 0.28, 0.9)
+	normal.border_width_left = 1
+	normal.border_width_top = 1
+	normal.border_width_right = 1
+	normal.border_width_bottom = 1
+	normal.border_color = Color(0.95, 0.97, 1.0, 0.75)
+	normal.corner_radius_top_left = 10
+	normal.corner_radius_top_right = 10
+	normal.corner_radius_bottom_left = 10
+	normal.corner_radius_bottom_right = 10
+	btn.add_theme_stylebox_override("normal", normal)
+	var hover = normal.duplicate()
+	hover.bg_color = Color(0.23, 0.31, 0.43, 1.0)
+	btn.add_theme_stylebox_override("hover", hover)
+	var pressed = normal.duplicate()
+	pressed.bg_color = Color(0.28, 0.42, 0.64, 1.0)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	return btn
+
 func clear_world():
 	for child in world_root.get_children():
 		child.queue_free()
@@ -82,112 +125,108 @@ func show_main_menu():
 	clear_ui()
 	clear_world()
 	
-	var title_label = Label.new()
-	title_label.text = "BOMB DODGE"
-	title_label.position = Vector2(520, 80)
-	title_label.add_theme_font_size_override("font_size", 54)
-	title_label.modulate = Color(1, 1, 1, 1)
-	ui_root.add_child(title_label)
+	var root_panel = PanelContainer.new()
+	root_panel.custom_minimum_size = Vector2(900, 500)
+	root_panel.position = Vector2(190, 110)
+	set_panel_style(root_panel, Color(0.16, 0.19, 0.24, 0.96), Color(0.6, 0.72, 0.95, 1.0))
+	ui_root.add_child(root_panel)
+	
+	var root_vbox = VBoxContainer.new()
+	root_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	root_panel.add_child(root_vbox)
+	
+	var title = Label.new()
+	title.text = "BOMB DODGE"
+	title.add_theme_font_size_override("font_size", 60)
+	title.modulate = Color(1, 1, 1, 1)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root_vbox.add_child(title)
 	
 	var subtitle = Label.new()
 	subtitle.text = "Choose a mode"
-	subtitle.position = Vector2(550, 150)
-	subtitle.add_theme_font_size_override("font_size", 24)
-	subtitle.modulate = Color(0.8, 0.85, 1.0, 1.0)
-	ui_root.add_child(subtitle)
+	subtitle.add_theme_font_size_override("font_size", 26)
+	subtitle.modulate = Color(0.8, 0.86, 1.0, 1.0)
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root_vbox.add_child(subtitle)
 	
-	var button_container = VBoxContainer.new()
-	button_container.position = Vector2(500, 220)
-	button_container.custom_minimum_size = Vector2(280, 0)
-	ui_root.add_child(button_container)
+	var button_box = VBoxContainer.new()
+	button_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	button_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	button_box.custom_minimum_size = Vector2(260, 0)
+	root_vbox.add_child(button_box)
 	
-	var solo_button = Button.new()
-	solo_button.text = "Solo"
-	solo_button.custom_minimum_size = Vector2(280, 60)
+	var solo_button = make_menu_button("Solo")
 	solo_button.pressed.connect(func(): show_color_selection(GameMode.SOLO))
-	button_container.add_child(solo_button)
+	button_box.add_child(solo_button)
 	
-	var multiplayer_button = Button.new()
-	multiplayer_button.text = "Local Multiplayer"
-	multiplayer_button.custom_minimum_size = Vector2(280, 60)
+	var multiplayer_button = make_menu_button("Local Multiplayer")
 	multiplayer_button.pressed.connect(func(): show_color_selection(GameMode.LOCAL_MULTIPLAYER))
-	button_container.add_child(multiplayer_button)
+	button_box.add_child(multiplayer_button)
 	
-	var quit_button = Button.new()
-	quit_button.text = "Quit"
-	quit_button.custom_minimum_size = Vector2(280, 60)
+	var quit_button = make_menu_button("Quit")
 	quit_button.pressed.connect(func(): get_tree().quit())
-	button_container.add_child(quit_button)
+	button_box.add_child(quit_button)
 
 func show_color_selection(mode: int):
 	game_mode = mode
 	clear_ui()
 	
-	var root = VBoxContainer.new()
-	root.position = Vector2(200, 60)
-	root.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	ui_root.add_child(root)
+	var root_panel = PanelContainer.new()
+	root_panel.custom_minimum_size = Vector2(900, 500)
+	root_panel.position = Vector2(190, 110)
+	set_panel_style(root_panel, Color(0.16, 0.18, 0.24, 0.96), Color(0.66, 0.75, 0.98, 1.0))
+	ui_root.add_child(root_panel)
+	
+	var root_vbox = VBoxContainer.new()
+	root_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	root_panel.add_child(root_vbox)
 	
 	var title = Label.new()
 	title.text = "Choose your colors"
 	title.add_theme_font_size_override("font_size", 34)
-	root.add_child(title)
+	title.modulate = Color(1, 1, 1, 1)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root_vbox.add_child(title)
 	
 	if game_mode == GameMode.SOLO:
-		var panel = PanelContainer.new()
-		panel.custom_minimum_size = Vector2(820, 180)
-		root.add_child(panel)
+		var solo_card = PanelContainer.new()
+		set_panel_style(solo_card, Color(0.1, 0.12, 0.2, 0.92), Color(0.75, 0.82, 1.0, 1.0))
+		solo_card.custom_minimum_size = Vector2(600, 180)
+		root_vbox.add_child(solo_card)
+		
 		var solo_box = VBoxContainer.new()
-		panel.add_child(solo_box)
+		solo_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		solo_card.add_child(solo_box)
 		
-		var solo_label = Label.new()
-		solo_label.text = "Player"
-		solo_label.add_theme_font_size_override("font_size", 20)
-		solo_box.add_child(solo_label)
-		
-		var preview = ColorRect.new()
-		preview.custom_minimum_size = Vector2(120, 120)
-		preview.color = COLOR_OPTIONS[solo_color_index]["color"]
-		solo_box.add_child(preview)
-		
-		var color_grid = HBoxContainer.new()
-		color_grid.alignment = BoxContainer.ALIGNMENT_CENTER
-		solo_box.add_child(color_grid)
+		var label = Label.new(); label.text = "Player"; label.add_theme_font_size_override("font_size", 22); solo_box.add_child(label)
+		var preview = ColorRect.new(); preview.custom_minimum_size = Vector2(120, 120); preview.color = COLOR_OPTIONS[solo_color_index]["color"]; solo_box.add_child(preview)
+		var color_row = HBoxContainer.new(); color_row.alignment = BoxContainer.ALIGNMENT_CENTER; solo_box.add_child(color_row)
 		for i in range(COLOR_OPTIONS.size()):
-			var button = Button.new()
-			button.text = COLOR_OPTIONS[i]["name"]
-			button.custom_minimum_size = Vector2(100, 42)
+			var button = make_menu_button(COLOR_OPTIONS[i]["name"], Vector2(100, 40), 18)
 			button.modulate = COLOR_OPTIONS[i]["color"]
 			button.pressed.connect(func():
 				solo_color_index = i
 				preview.color = COLOR_OPTIONS[i]["color"]
 			)
-			color_grid.add_child(button)
+			color_row.add_child(button)
 		
-		var start_button = Button.new()
-		start_button.text = "Start Match"
-		start_button.custom_minimum_size = Vector2(220, 56)
+		var start_button = make_menu_button("Start Match", Vector2(220, 56), 22)
 		start_button.pressed.connect(func(): start_match())
-		root.add_child(start_button)
+		root_vbox.add_child(start_button)
 	else:
-		var top_row = HBoxContainer.new()
-		top_row.alignment = BoxContainer.ALIGNMENT_CENTER
-		root.add_child(top_row)
+		var row = HBoxContainer.new()
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.custom_minimum_size = Vector2(700, 230)
+		root_vbox.add_child(row)
 		
-		var p1_box = VBoxContainer.new()
-		p1_box.custom_minimum_size = Vector2(300, 200)
-		top_row.add_child(p1_box)
-		var p1_label = Label.new(); p1_label.text = "Player 1"; p1_label.add_theme_font_size_override("font_size", 20); p1_box.add_child(p1_label)
+		var p1_box = VBoxContainer.new(); p1_box.alignment = BoxContainer.ALIGNMENT_CENTER; row.add_child(p1_box)
+		var p1_label = Label.new(); p1_label.text = "Player 1"; p1_label.add_theme_font_size_override("font_size", 22); p1_box.add_child(p1_label)
 		var p1_preview = ColorRect.new(); p1_preview.custom_minimum_size = Vector2(120, 120); p1_preview.color = COLOR_OPTIONS[p1_color_index]["color"]; p1_box.add_child(p1_preview)
 		var p1_colors = HBoxContainer.new(); p1_box.add_child(p1_colors)
-		var p2_box = VBoxContainer.new(); p2_box.custom_minimum_size = Vector2(300, 200); top_row.add_child(p2_box)
-		var p2_label = Label.new(); p2_label.text = "Player 2"; p2_label.add_theme_font_size_override("font_size", 20); p2_box.add_child(p2_label)
-		var p2_preview = ColorRect.new(); p2_preview.custom_minimum_size = Vector2(120, 120); p2_preview.color = COLOR_OPTIONS[p2_color_index]["color"]; p2_box.add_child(p2_preview)
-		var p2_colors = HBoxContainer.new(); p2_box.add_child(p2_colors)
-		
 		for i in range(COLOR_OPTIONS.size()):
-			var button = Button.new(); button.text = COLOR_OPTIONS[i]["name"]; button.custom_minimum_size = Vector2(90, 36); button.modulate = COLOR_OPTIONS[i]["color"]
-			button.pressed.connect(func():
+			var btn = make_menu_button(COLOR_OPTIONS[i]["name"], Vector2(90, 38), 16)
+			btn.modulate = COLOR_OPTIONS[i]["color"]
+			btn.pressed.connect(func():
 				p1_color_index = i
 				p1_preview.color = COLOR_OPTIONS[i]["color"]
 				if p1_color_index == p2_color_index:
@@ -195,11 +234,16 @@ func show_color_selection(mode: int):
 					if p2_color_index != -1:
 						p2_preview.color = COLOR_OPTIONS[p2_color_index]["color"]
 			)
-			p1_colors.add_child(button)
+			p1_colors.add_child(btn)
 		
+		var p2_box = VBoxContainer.new(); p2_box.alignment = BoxContainer.ALIGNMENT_CENTER; row.add_child(p2_box)
+		var p2_label = Label.new(); p2_label.text = "Player 2"; p2_label.add_theme_font_size_override("font_size", 22); p2_box.add_child(p2_label)
+		var p2_preview = ColorRect.new(); p2_preview.custom_minimum_size = Vector2(120, 120); p2_preview.color = COLOR_OPTIONS[p2_color_index]["color"]; p2_box.add_child(p2_preview)
+		var p2_colors = HBoxContainer.new(); p2_box.add_child(p2_colors)
 		for i in range(COLOR_OPTIONS.size()):
-			var button = Button.new(); button.text = COLOR_OPTIONS[i]["name"]; button.custom_minimum_size = Vector2(90, 36); button.modulate = COLOR_OPTIONS[i]["color"]
-			button.pressed.connect(func():
+			var btn = make_menu_button(COLOR_OPTIONS[i]["name"], Vector2(90, 38), 16)
+			btn.modulate = COLOR_OPTIONS[i]["color"]
+			btn.pressed.connect(func():
 				var selected_index = i
 				if selected_index == p1_color_index:
 					var alt_index = get_next_available_color_index(selected_index)
@@ -209,15 +253,15 @@ func show_color_selection(mode: int):
 				p2_color_index = selected_index
 				p2_preview.color = COLOR_OPTIONS[selected_index]["color"]
 			)
-			p2_colors.add_child(button)
+			p2_colors.add_child(btn)
 		
-		var start_button = Button.new(); start_button.text = "Start Match"; start_button.custom_minimum_size = Vector2(220, 56)
+		var start_button = make_menu_button("Start Match", Vector2(220, 56), 22)
 		start_button.pressed.connect(func(): start_match())
-		root.add_child(start_button)
+		root_vbox.add_child(start_button)
 	
-	var back_button = Button.new(); back_button.text = "Back to Menu"; back_button.custom_minimum_size = Vector2(220, 56)
+	var back_button = make_menu_button("Back to Menu", Vector2(220, 56), 22)
 	back_button.pressed.connect(func(): show_main_menu())
-	root.add_child(back_button)
+	root_vbox.add_child(back_button)
 
 func get_next_available_color_index(excluded_index: int) -> int:
 	for i in range(COLOR_OPTIONS.size()):
@@ -226,13 +270,13 @@ func get_next_available_color_index(excluded_index: int) -> int:
 	return -1
 
 func create_arena():
-	arena_bg = ColorRect.new()
-	arena_bg.position = Vector2.ZERO
-	arena_bg.size = Vector2(ARENA_WIDTH, ARENA_HEIGHT)
-	arena_bg.color = Color(0.02, 0.08, 0.18, 1.0)
-	world_root.add_child(arena_bg)
+	var bg = ColorRect.new()
+	bg.position = Vector2.ZERO
+	bg.size = Vector2(ARENA_WIDTH, ARENA_HEIGHT)
+	bg.color = Color(0.02, 0.08, 0.18, 1.0)
+	world_root.add_child(bg)
 	
-	var border_color = Color(0.4, 0.55, 0.75, 1.0)
+	var border_color = Color(0.42, 0.62, 0.86, 1.0)
 	var border_thickness = 4
 	var border_nodes = [
 		[Vector2(0, 0), Vector2(ARENA_WIDTH, border_thickness)],
@@ -248,21 +292,21 @@ func create_arena():
 		world_root.add_child(border)
 	
 	var wall_thickness = 30
-	var wall_data = [
+	var walls = [
 		[Vector2(0, ARENA_HEIGHT / 2), Vector2(wall_thickness, ARENA_HEIGHT)],
 		[Vector2(ARENA_WIDTH - wall_thickness, ARENA_HEIGHT / 2), Vector2(wall_thickness, ARENA_HEIGHT)],
 		[Vector2(ARENA_WIDTH / 2, 0), Vector2(ARENA_WIDTH, wall_thickness)],
 		[Vector2(ARENA_WIDTH / 2, ARENA_HEIGHT - wall_thickness), Vector2(ARENA_WIDTH, wall_thickness)],
 	]
-	for wall in wall_data:
-		var static_wall = StaticBody2D.new()
+	for wall_data in walls:
+		var wall = StaticBody2D.new()
 		var shape = CollisionShape2D.new()
 		var rect = RectangleShape2D.new()
-		rect.extents = wall[1] / 2
+		rect.extents = wall_data[1] / 2
 		shape.shape = rect
-		static_wall.add_child(shape)
-		static_wall.position = wall[0]
-		world_root.add_child(static_wall)
+		wall.add_child(shape)
+		wall.position = wall_data[0]
+		world_root.add_child(wall)
 
 func create_match_ui():
 	if timer_label != null:
@@ -274,23 +318,30 @@ func create_match_ui():
 	
 	timer_label = Label.new()
 	timer_label.text = "Time: 0.0s"
-	timer_label.position = Vector2(470, 18)
-	timer_label.add_theme_font_size_override("font_size", 32)
+	timer_label.position = Vector2(420, 18)
+	timer_label.add_theme_font_size_override("font_size", 36)
 	timer_label.modulate = Color(1, 1, 1, 1)
+	timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	timer_label.custom_minimum_size = Vector2(440, 40)
 	ui_root.add_child(timer_label)
 	
 	info_label = Label.new()
 	info_label.text = ""
-	info_label.position = Vector2(420, 660)
+	info_label.position = Vector2(380, 655)
 	info_label.add_theme_font_size_override("font_size", 18)
-	info_label.modulate = Color(0.8, 0.85, 1.0, 1.0)
+	info_label.modulate = Color(0.82, 0.88, 1.0, 1.0)
+	info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	info_label.custom_minimum_size = Vector2(520, 30)
 	ui_root.add_child(info_label)
 	
 	results_label = Label.new()
 	results_label.text = ""
-	results_label.position = Vector2(340, 150)
+	results_label.position = Vector2(220, 150)
+	results_label.custom_minimum_size = Vector2(840, 400)
 	results_label.add_theme_font_size_override("font_size", 32)
 	results_label.modulate = Color(1, 1, 1, 1)
+	results_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	results_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	results_label.visible = false
 	ui_root.add_child(results_label)
 	update_timer_label()
@@ -376,26 +427,30 @@ func _spawn_bomb():
 	bomb.position = safe_pos
 	world_root.add_child(bomb)
 	bombs.append(bomb)
-	
 	bomb.tree_exiting.connect(func():
-		bombs.erase(bomb)
+		if bombs.has(bomb):
+			bombs.erase(bomb)
 	)
 
 func find_valid_bomb_position() -> Vector2:
-	var attempts = 0
-	while attempts < 60:
-		var x = randf_range(80, ARENA_WIDTH - 80)
-		var y = randf_range(80, ARENA_HEIGHT - 80)
+	for i in range(90):
+		var x = randf_range(90, ARENA_WIDTH - 90)
+		var y = randf_range(90, ARENA_HEIGHT - 90)
 		var pos = Vector2(x, y)
-		var location_ok = true
+		var valid = true
 		for player in players:
 			if player != null and player.is_inside_tree():
-				if player.global_position.distance_to(pos) < 120:
-					location_ok = false
+				if player.global_position.distance_to(pos) < 140:
+					valid = false
 					break
-		if location_ok:
+			if valid and bombs.size() > 0:
+				for bomb in bombs:
+					if bomb != null and bomb.is_inside_tree():
+						if bomb.global_position.distance_to(pos) < 90:
+							valid = false
+							break
+		if valid:
 			return pos
-		attempts += 1
 	return Vector2.ZERO
 
 func check_for_game_over():
@@ -429,8 +484,8 @@ func show_results(alive_players: Array):
 	
 	results_label.text = result_text
 	results_label.visible = true
-	results_label.position = Vector2(280, 200)
 	results_label.modulate = Color(1, 1, 1, 1)
+	results_label.add_theme_font_size_override("font_size", 34)
 
 func _on_bomb_removed(bomb):
 	if bombs.has(bomb):
