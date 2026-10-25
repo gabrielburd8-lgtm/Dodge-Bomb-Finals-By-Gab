@@ -5,7 +5,10 @@ const BOMB_SCENE = preload("res://scenes/Bomb.tscn")
 
 const ARENA_WIDTH = 1280
 const ARENA_HEIGHT = 720
-const MAX_ACTIVE_BOMBS = 6
+const MAX_ACTIVE_BOMBS = 20
+const STARTING_BOMBS = 8
+const BOMB_SPAWN_INTERVAL = 0.6
+const PICKUP_SPAWN_DELAY = 4.0
 
 const COLOR_OPTIONS = [
 	{"name": "Red", "color": Color(1.0, 0.32, 0.32)},
@@ -30,7 +33,9 @@ var round_active := false
 var elapsed_time := 0.0
 var players: Array = []
 var bombs: Array = []
+var ability_pickups: Array = []
 var bomb_timer: Timer
+var pickup_timer: Timer
 var timer_label: Label
 var info_label: Label
 var results_label: Label
@@ -70,6 +75,7 @@ func clear_world():
 		child.queue_free()
 	players.clear()
 	bombs.clear()
+	ability_pickups.clear()
 
 func clear_ui():
 	for child in ui_root.get_children():
@@ -222,57 +228,59 @@ func show_color_selection(mode: int):
 		vbox.add_child(row)
 		
 		var p1_box = VBoxContainer.new(); p1_box.alignment = BoxContainer.ALIGNMENT_CENTER; row.add_child(p1_box)
-		var p1_label = Label.new(); p1_label.text = "Player 1"; p1_label.add_theme_font_size_override("font_size", 22); p1_box.add_child(p1_label)
+		var p1_label = Label.new(); p1_label.text = "PLAYER 1"; p1_label.add_theme_font_size_override("font_size", 22); p1_box.add_child(p1_label)
 		var p1_preview = ColorRect.new(); p1_preview.custom_minimum_size = Vector2(110, 110); p1_preview.color = COLOR_OPTIONS[p1_color_index]["color"]; p1_box.add_child(p1_preview)
 		var p1_row = HBoxContainer.new(); p1_row.alignment = BoxContainer.ALIGNMENT_CENTER; p1_box.add_child(p1_row)
 		for i in range(COLOR_OPTIONS.size()):
 			var btn = make_menu_button(COLOR_OPTIONS[i]["name"], Vector2(90, 38), 15)
 			btn.modulate = COLOR_OPTIONS[i]["color"]
+			btn.set_meta("color_index", i)
 			var pick_index = i
 			btn.pressed.connect(func():
 				p1_color_index = pick_index
 				p1_preview.color = COLOR_OPTIONS[p1_color_index]["color"]
-				if p1_color_index == p2_color_index:
-					var alt = get_next_available_color_index(p1_color_index)
-					if alt != -1:
-						p2_color_index = alt
-						p1_preview.color = COLOR_OPTIONS[p1_color_index]["color"]
-				)
+				refresh_mp_color_buttons(p1_row, p2_row, p1_preview, p2_preview)
+			)
 			p1_row.add_child(btn)
 		
 		var p2_box = VBoxContainer.new(); p2_box.alignment = BoxContainer.ALIGNMENT_CENTER; row.add_child(p2_box)
-		var p2_label = Label.new(); p2_label.text = "Player 2"; p2_label.add_theme_font_size_override("font_size", 22); p2_box.add_child(p2_label)
+		var p2_label = Label.new(); p2_label.text = "PLAYER 2"; p2_label.add_theme_font_size_override("font_size", 22); p2_box.add_child(p2_label)
 		var p2_preview = ColorRect.new(); p2_preview.custom_minimum_size = Vector2(110, 110); p2_preview.color = COLOR_OPTIONS[p2_color_index]["color"]; p2_box.add_child(p2_preview)
 		var p2_row = HBoxContainer.new(); p2_row.alignment = BoxContainer.ALIGNMENT_CENTER; p2_box.add_child(p2_row)
 		for i in range(COLOR_OPTIONS.size()):
 			var btn = make_menu_button(COLOR_OPTIONS[i]["name"], Vector2(90, 38), 15)
 			btn.modulate = COLOR_OPTIONS[i]["color"]
+			btn.set_meta("color_index", i)
 			var pick_index = i
 			btn.pressed.connect(func():
-				if pick_index == p1_color_index:
-					var alt = get_next_available_color_index(pick_index)
-					if alt == -1:
-						return
-					p2_color_index = alt
-				else:
-					p2_color_index = pick_index
+				p2_color_index = pick_index
 				p2_preview.color = COLOR_OPTIONS[p2_color_index]["color"]
+				refresh_mp_color_buttons(p1_row, p2_row, p1_preview, p2_preview)
 			)
 			p2_row.add_child(btn)
 		
 		var start_button = make_menu_button("Start Match", Vector2(220, 56), 22)
-		start_button.pressed.connect(func(): start_match())
+		start_button.disabled = p1_color_index == p2_color_index
+		start_button.pressed.connect(func():
+			if p1_color_index != p2_color_index:
+				start_match()
+			)
 		vbox.add_child(start_button)
-	
+		refresh_mp_color_buttons(p1_row, p2_row, p1_preview, p2_preview)
+		
 	var back_button = make_menu_button("Back to Menu", Vector2(220, 56), 22)
 	back_button.pressed.connect(func(): show_main_menu())
 	vbox.add_child(back_button)
 
-func get_next_available_color_index(excluded_index: int) -> int:
-	for i in range(COLOR_OPTIONS.size()):
-		if i != excluded_index:
-			return i
-	return -1
+func refresh_mp_color_buttons(p1_row: HBoxContainer, p2_row: HBoxContainer, p1_preview: ColorRect, p2_preview: ColorRect):
+	p1_preview.color = COLOR_OPTIONS[p1_color_index]["color"]
+	p2_preview.color = COLOR_OPTIONS[p2_color_index]["color"]
+	for child in p1_row.get_children():
+		var idx = child.get_meta("color_index")
+		child.disabled = idx == p2_color_index
+	for child in p2_row.get_children():
+		var idx = child.get_meta("color_index")
+		child.disabled = idx == p1_color_index
 
 func create_arena():
 	var bg = ColorRect.new()
@@ -295,23 +303,6 @@ func create_arena():
 		border.size = data[1]
 		border.color = border_color
 		world_root.add_child(border)
-	
-	var wall_thickness = 30
-	var walls = [
-		[Vector2(0, ARENA_HEIGHT / 2), Vector2(wall_thickness, ARENA_HEIGHT)],
-		[Vector2(ARENA_WIDTH - wall_thickness, ARENA_HEIGHT / 2), Vector2(wall_thickness, ARENA_HEIGHT)],
-		[Vector2(ARENA_WIDTH / 2, 0), Vector2(ARENA_WIDTH, wall_thickness)],
-		[Vector2(ARENA_WIDTH / 2, ARENA_HEIGHT - wall_thickness), Vector2(ARENA_WIDTH, wall_thickness)],
-	]
-	for wall_data in walls:
-		var wall = StaticBody2D.new()
-		var shape = CollisionShape2D.new()
-		var rect = RectangleShape2D.new()
-		rect.extents = wall_data[1] / 2
-		shape.shape = rect
-		wall.add_child(shape)
-		wall.position = wall_data[0]
-		world_root.add_child(wall)
 
 func create_match_ui():
 	if timer_label != null:
@@ -324,7 +315,7 @@ func create_match_ui():
 	timer_label = Label.new()
 	timer_label.text = "Time: 0.0s"
 	timer_label.position = Vector2(420, 18)
-	timer_label.add_theme_font_size_override("font_size", 36)
+	timer_label.add_theme_font_size_override("font_size", 30)
 	timer_label.modulate = Color(1, 1, 1, 1)
 	timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	timer_label.custom_minimum_size = Vector2(440, 40)
@@ -349,7 +340,7 @@ func create_match_ui():
 	results_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	results_label.visible = false
 	ui_root.add_child(results_label)
-	update_timer_label()
+	update_timer_label() 
 
 func update_timer_label():
 	if timer_label != null:
@@ -365,11 +356,15 @@ func start_match():
 	create_match_ui()
 	spawn_players()
 	start_bomb_spawner()
+	start_pickup_timer()
 	
 	if game_mode == GameMode.SOLO:
 		info_label.text = "WASD to move - survive as long as you can"
 	else:
 		info_label.text = "Player 1: WASD | Player 2: Arrow Keys"
+	
+	for i in range(STARTING_BOMBS):
+		_spawn_bomb()
 
 func spawn_players():
 	players.clear()
@@ -380,6 +375,7 @@ func spawn_players():
 		player.set_player_name("Player")
 		player.set_player_id(1)
 		player.set_player_color(COLOR_OPTIONS[solo_color_index]["color"])
+		player.set_arena_bounds(Vector2(ARENA_WIDTH, ARENA_HEIGHT))
 		world_root.add_child(player)
 		players.append(player)
 		return
@@ -390,6 +386,7 @@ func spawn_players():
 	player1.set_player_name("Player 1")
 	player1.set_player_id(1)
 	player1.set_player_color(COLOR_OPTIONS[p1_color_index]["color"])
+	player1.set_arena_bounds(Vector2(ARENA_WIDTH, ARENA_HEIGHT))
 	world_root.add_child(player1)
 	players.append(player1)
 	
@@ -399,6 +396,7 @@ func spawn_players():
 	player2.set_player_name("Player 2")
 	player2.set_player_id(2)
 	player2.set_player_color(COLOR_OPTIONS[p2_color_index]["color"])
+	player2.set_arena_bounds(Vector2(ARENA_WIDTH, ARENA_HEIGHT))
 	world_root.add_child(player2)
 	players.append(player2)
 
@@ -408,11 +406,23 @@ func start_bomb_spawner():
 		bomb_timer.queue_free()
 	
 	bomb_timer = Timer.new()
-	bomb_timer.wait_time = 0.5
+	bomb_timer.wait_time = BOMB_SPAWN_INTERVAL
 	bomb_timer.autostart = true
 	bomb_timer.one_shot = false
 	bomb_timer.timeout.connect(_spawn_bomb)
 	world_root.add_child(bomb_timer)
+
+func start_pickup_timer():
+	if pickup_timer != null:
+		pickup_timer.stop()
+		pickup_timer.queue_free()
+	
+	pickup_timer = Timer.new()
+	pickup_timer.wait_time = PICKUP_SPAWN_DELAY
+	pickup_timer.autostart = true
+	pickup_timer.one_shot = false
+	pickup_timer.timeout.connect(_try_spawn_pickup)
+	world_root.add_child(pickup_timer)
 
 func _spawn_bomb():
 	if not round_active:
@@ -434,21 +444,121 @@ func _spawn_bomb():
 			bombs.erase(bomb)
 	)
 
+func _try_spawn_pickup():
+	if not round_active:
+		return
+	if ability_pickups.size() >= 2:
+		return
+	
+	var pickup_type = get_random_compatible_pickup_type()
+	if pickup_type == null:
+		return
+	
+	var safe_pos = find_valid_pickup_position()
+	if safe_pos == null:
+		return
+	
+	var pickup = Area2D.new()
+	pickup.name = "Pickup"
+	pickup.position = safe_pos
+	pickup.monitoring = true
+	pickup.monitorable = true
+	var circle = CircleShape2D.new()
+	circle.radius = 28
+	var shape = CollisionShape2D.new()
+	shape.shape = circle
+	pickup.add_child(shape)
+	
+	var bg = ColorRect.new()
+	bg.position = Vector2(-28, -28)
+	bg.size = Vector2(56, 56)
+	bg.color = pickup_type == "dash" ? Color(1.0, 0.32, 0.32) : Color(0.26, 0.62, 1.0)
+	pickup.add_child(bg)
+	
+	var label = Label.new()
+	label.text = pickup_type.to_upper()
+	label.position = Vector2(-18, -10)
+	label.add_theme_font_size_override("font_size", 13)
+	label.modulate = Color(1, 1, 1, 1)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pickup.add_child(label)
+	
+	pickup.body_entered.connect(func(body):
+		if body == null:
+			return
+		if body.has_method("collect_pickup") and body.can_collect_pickup(pickup_type):
+			body.collect_pickup(pickup_type)
+			if ability_pickups.has(pickup):
+				ability_pickups.erase(pickup)
+			pickup.queue_free()
+	)
+	
+	world_root.add_child(pickup)
+	ability_pickups.append(pickup)
+
+func get_random_compatible_pickup_type():
+	var options: Array = []
+	if game_mode == GameMode.SOLO:
+		if COLOR_OPTIONS[solo_color_index]["name"] == "Red":
+			options.append("dash")
+		elif COLOR_OPTIONS[solo_color_index]["name"] == "Blue":
+			options.append("shield")
+		return options.pick_random() if options.size() > 0 else null
+	
+	if COLOR_OPTIONS[p1_color_index]["name"] == "Red" or COLOR_OPTIONS[p2_color_index]["name"] == "Red":
+		options.append("dash")
+	if COLOR_OPTIONS[p1_color_index]["name"] == "Blue" or COLOR_OPTIONS[p2_color_index]["name"] == "Blue":
+		options.append("shield")
+	return options.pick_random() if options.size() > 0 else null
+
 func find_valid_bomb_position() -> Vector2:
-	for i in range(90):
+	for i in range(120):
 		var x = randf_range(90, ARENA_WIDTH - 90)
 		var y = randf_range(90, ARENA_HEIGHT - 90)
 		var pos = Vector2(x, y)
 		var valid = true
 		for player in players:
 			if player != null and player.is_inside_tree():
-				if player.global_position.distance_to(pos) < 140:
+				if player.global_position.distance_to(pos) < 150:
+					valid = false
+					break
+		if valid:
+			for bomb in bombs:
+				if bomb != null and bomb.is_inside_tree():
+					if bomb.global_position.distance_to(pos) < 110:
+						valid = false
+						break
+		if valid:
+			for pickup in ability_pickups:
+				if pickup != null and pickup.is_inside_tree():
+					if pickup.global_position.distance_to(pos) < 80:
+						valid = false
+						break
+		if valid:
+			return pos
+	return Vector2.ZERO
+
+func find_valid_pickup_position() -> Vector2:
+	for i in range(120):
+		var x = randf_range(100, ARENA_WIDTH - 100)
+		var y = randf_range(100, ARENA_HEIGHT - 100)
+		var pos = Vector2(x, y)
+		var valid = true
+		for player in players:
+			if player != null and player.is_inside_tree():
+				if player.global_position.distance_to(pos) < 90:
 					valid = false
 					break
 		if valid:
 			for bomb in bombs:
 				if bomb != null and bomb.is_inside_tree():
 					if bomb.global_position.distance_to(pos) < 90:
+						valid = false
+						break
+		if valid:
+			for pickup in ability_pickups:
+				if pickup != null and pickup.is_inside_tree():
+					if pickup.global_position.distance_to(pos) < 90:
 						valid = false
 						break
 		if valid:
@@ -465,6 +575,8 @@ func check_for_game_over():
 		round_active = false
 		if bomb_timer != null:
 			bomb_timer.stop()
+		if pickup_timer != null:
+			pickup_timer.stop()
 		show_results(alive_players)
 
 func show_results(alive_players: Array):
