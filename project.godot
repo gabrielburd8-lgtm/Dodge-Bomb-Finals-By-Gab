@@ -1,0 +1,16 @@
+[gd_resource type="ProjectSettings" format=3]
+
+config_version = 5
+
+[application]
+config/name="Bomb Dodge"
+run/main_scene="res://scenes/Main.tscn"
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/vsync_mode=1
+
+[rendering]
+textures/canvas_textures/default_texture_filter=0
+renderer/rendering_method="mobile"
