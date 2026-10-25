@@ -73,12 +73,13 @@ func _physics_process(delta):
 		last_movement_direction = move
 
 	var current_speed = SPEED
+	var direction = move
 	if dash_timer > 0.0:
 		current_speed = DASH_SPEED
-
-	var direction = move
-	if direction.length() <= 0.0:
-		direction = last_movement_direction
+		if direction.length() <= 0.0:
+			direction = last_movement_direction
+	else:
+		direction = move
 
 	velocity = direction * current_speed
 	move_and_slide()
