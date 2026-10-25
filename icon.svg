@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
   <defs>
     <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#0d1b2a"/>
-      <stop offset="100%" stop-color="#1b263b"/>
+      <stop offset="0%" stop-color="#0d3b66"/>
+      <stop offset="100%" stop-color="#123d60"/>
     </linearGradient>
     <linearGradient id="bomb" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#ffb347"/>
-      <stop offset="100%" stop-color="#ff7b54"/>
+      <stop offset="0%" stop-color="#111111"/>
+      <stop offset="100%" stop-color="#000000"/>
     </linearGradient>
   </defs>
   <rect width="128" height="128" rx="20" fill="url(#bg)"/>
   <circle cx="64" cy="64" r="32" fill="url(#bomb)"/>
-  <circle cx="64" cy="64" r="13" fill="#fff8d7" opacity="0.9"/>
-  <path d="M64 24 L76 54 L64 98 L52 54 Z" fill="none" stroke="#ffd166" stroke-width="6" opacity="0.9"/>
-  <text x="64" y="110" text-anchor="middle" font-size="18" font-family="Arial" font-weight="bold" fill="#ffffff">B</text>
+  <circle cx="64" cy="64" r="12" fill="#dfeaf6" opacity="0.9"/>
+  <path d="M64 24 L74 52 L64 98 L54 52 Z" fill="none" stroke="#2d5d9a" stroke-width="5" opacity="0.9"/>
+  <circle cx="64" cy="64" r="8" fill="#0d3b66" opacity="0.9"/>
 </svg>
